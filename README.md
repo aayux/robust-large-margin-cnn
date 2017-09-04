@@ -18,4 +18,4 @@ A multilayer Convolutional Neural Network architecture similar to one used in im
 
 ### References
 
-[1]\ [Robust Large Margin Deep Neural Networks](https://arxiv.org/abs/1605.08254), Jure Sokolic et al. (revised May 2017)
+[1]  [Robust Large Margin Deep Neural Networks](https://arxiv.org/abs/1605.08254), Jure Sokolic et al. (revised May 2017)

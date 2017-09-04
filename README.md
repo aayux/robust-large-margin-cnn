@@ -9,7 +9,7 @@ This is currently a work in progress. See notebooks for examples and test runs.
 
 A multilayer Convolutional Neural Network architecture similar to one used in image classfication tasks, with a custom regularisation function bounding the generalisation error [1].
 
-###Datasets
+### Datasets
 
 - [IMdB Movie Reviews](http://ai.stanford.edu/~amaas/data/sentiment/)
 - [GloVe: Global Vector for Word Representation](https://nlp.stanford.edu/projects/glove/)

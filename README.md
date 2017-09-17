@@ -2,8 +2,6 @@
 
 ## A Text Classification Example
 
-----------------------------------------------------------
-
 ### About Code
 This is currently a work in progress. See notebooks for examples and test runs.
 

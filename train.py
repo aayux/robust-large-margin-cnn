@@ -41,49 +41,6 @@ print ("Embeddings loaded. Initialising model hyperparameters ...")
 
 # embedding.shape
 
-
-# In[ ]:
-
-def init_weight(self, shape):
-    return tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
-
-def init_bias(self, shape):
-    return tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
-
-def convolution(self, inp, kernelShape, biasShape):
-    W = tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="weight")
-    b = tf.Variable(tf.constant(0.1, shape=[num_filters // 2]), name="bias")
-    conv = tf.nn.conv2d(
-        self.h_pool,
-        W,
-        strides=[1, 1, 1, 1],
-        padding="VALID",
-        name="convolution")
-    return conv
-
-def non_linearity():
-    h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
-
-def maxpool(self, inp, kernelShape):
-        pooled = tf.nn.max_pool(
-                    h,
-                    ksize=[1, sequence_length // 2 - filter_size, 1, 1],
-                    strides=[1, 1, 1, 1],
-                    padding='VALID',
-                    name="pool")
-                print('Maxpool1-{}: {}'.format(filter_size, pooled.get_shape()))
-                pooled_outputs.append(pooled)
-        return pooled
-
-def fully_connected(self, inp, inpShape, outShape, activation=False):
-    weights = self.init_weight([inpShape, outShape])
-    bias = self.init_bias(outShape)
-    out = tf.matmul(inp, weights) + bias
-    if activation:
-        return tf.nn.relu(out)
-    return out
-
-
 # In[117]:
 
 class TextCNN(object):

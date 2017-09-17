@@ -1,6 +1,6 @@
-#Jacobian Regularisation for Convolutional Neural Networks 
+# Jacobian Regularisation for Convolutional Neural Networks 
 
-##A Text Classification Example
+## A Text Classification Example
 
 ----------------------------------------------------------
 

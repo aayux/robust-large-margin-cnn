@@ -4,4 +4,4 @@
 
 ----------------------------------------------------------
 
-For model checkpointing.
+IPython notebooks containing test runs and demos

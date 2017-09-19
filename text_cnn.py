@@ -131,7 +131,7 @@ class TextCNN(object):
                         # dimension: (batch_size, number of filters, height, width)
                         # reshaped to: (batch_size, height, width, number of filters) - > (batch_size*height*width, number of filters)
                         
-                        # NOTE: This is not correct. Dimensions need to be fixed but general arithemetic is correct.
+                        # NOTE: This is not correct. Dimensions need to be fixed but general arithmetic is correct.
                         g_x = tf.gradients(tf.add(tf.multiply(input_y, self.predictions), layer_outputs[idx]).dimshuffle((0, 2, 3, 1)).reshape(
                                 (-1, W.shape[0])))
                         
@@ -139,7 +139,7 @@ class TextCNN(object):
                         reg = tf.matmul(tf.transpose(g_x), g_x)
 
                         # parameter update
-                        # NOTE: This is not correct. Dimensions need to be fixed but general arithemetic is correct.
+                        # NOTE: This is not correct. Dimensions need to be fixed but general arithmetic is correct.
                         W -= 1e-3 * jac_reg * tf.tensordot(reg, W, axes=[[1], [0]])
 
         # Accuracy

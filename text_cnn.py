@@ -3,45 +3,6 @@ import numpy as np
 
 from tensorflow.contrib import learn
 
-def init_weight(self, shape):
-    return tf.Variable(tf.truncated_normal(shape, stddev=0.1), name="W")
-
-def init_bias(self, shape):
-    return tf.Variable(tf.constant(0.1, shape=shape), name="b")
-
-def non_linearity(self, conv, bias):
-    return tf.nn.relu(tf.nn.bias_add(conv, bias), name="relu")
-
-def add_dropout(self, drop_input, keep_prob):
-    return tf.nn.dropout(drop_input, keep_prob)
-
-def convolution(self, conv_input, weights):
-    conv = tf.nn.conv2d(
-        conv_input,
-        weights,
-        strides=[1, 1, 1, 1],
-        padding="VALID",
-        name="convolution")
-    return conv
-
-def maxpool(self, pool_input, ksize):
-        pooled = tf.nn.max_pool(
-                    pool_input,
-                    ksize=ksize,
-                    strides=[1, 1, 1, 1],
-                    padding='VALID',
-                    name="pool")
-        return pooled
-
-def fully_connected(self, inp, inpShape, outShape, activation=False):
-    weights = self.init_weight([inpShape, outShape])
-    bias = self.init_bias(outShape)
-    out = tf.matmul(inp, weights) + bias
-    if activation:
-        return tf.nn.relu(out)
-    return out
-
-
 class TextCNN(object):
     """
     A CNN for text classification.
@@ -71,12 +32,14 @@ class TextCNN(object):
         print('Embedding: {}'.format(self.embedded_chars_expanded.get_shape()))
         
         # Create a convolution + maxpool layer for each filter size
+        layer_outouts = []
         pooled_outputs = []
         for i, filter_size in enumerate(filter_sizes):
             with tf.name_scope("conv%s-maxpool-1" % filter_size):
                 # Convolution Layer
                 filter_shape = [filter_size, embedding_size, 1, num_filters]
-                W = self.init_weight(filter_shape)
+                with variable_scope(("conv%s-maxpool-1" % filter_size),  reuse=None):
+                    W = self.init_weight(filter_shape)
                 b = self.init_bias([num_filters])
                 conv = self.convolution(self.embedded_chars_expanded, W)
                 print('Conv1-{}: {}'.format(filter_size, conv.get_shape()))
@@ -90,14 +53,18 @@ class TextCNN(object):
                 print('Maxpool1-{}: {}'.format(filter_size, pooled.get_shape()))
                 pooled_outputs.append(pooled)
 
+        layer_outputs = pooled_outputs
+
         # Combine all the pooled features
         num_filters_total = num_filters * len(filter_sizes)
         self.h_pool = tf.concat(3, pooled_outputs)
         print('Concatenated: {}'.format(self.h_pool.get_shape()))       
         
+        # Second convolution + maxpool layer
         with tf.name_scope("conv-maxpool-2"):
             filter_shape = [4, 1, self.h_pool.get_shape()[3].value, num_filters // 2]
-            W = self.init_weight(filter_shape)
+            with variable_scope("conv-maxpool-2",  reuse=None):
+                W = self.init_weight(filter_shape)
             b = self.init_bias([num_filters // 2])
             conv = self.convolution(self.h_pool, W)
             print('Conv2: {}'.format(conv.get_shape()))
@@ -107,11 +74,14 @@ class TextCNN(object):
             ksize = [1, 128 // 8 - 1, 1, 1]
             self.pooled_2 = self.maxpool(h, ksize)
 
+            layer_outputs.append(self.pooled_2)
             print('Maxpool2: {}'.format(self.pooled_2.get_shape()))
-            
+        
+        # Third convolution + maxpool layer            
         with tf.name_scope("conv-maxpool-3"):
             filter_shape = [6, 1, self.pooled_2.get_shape()[3].value, num_filters // 2]
-            W = self.init_weight(filter_shape)
+            with variable_scope("conv-maxpool-3",  reuse=None):
+                W = self.init_weight(filter_shape)
             b = self.init_bias([num_filters // 2])
             conv = self.convolution(self.pooled_2, W)
             print('Conv3: {}'.format(conv.get_shape()))
@@ -120,6 +90,8 @@ class TextCNN(object):
             
             ksize=[1, conv_3.get_shape()[1].value, 1, 1]
             self.pooled_3 = self.maxpool(h, ksize)
+            
+            layer_outputs.append(self.pooled_2)
             print('Maxpool3: {}'.format(self.pooled_3.get_shape()))
         
         # Flatten into a long feature vector
@@ -132,10 +104,11 @@ class TextCNN(object):
         
         # Final (unnormalized) scores and predictions
         with tf.name_scope("output"):
-            W = tf.get_variable(
-                "W",
-                shape=[num_filters // 2, num_classes],
-                initializer=tf.contrib.layers.xavier_initializer())
+            with variable_scope("output",  reuse=None):
+                W = tf.get_variable(
+                    "W",
+                    shape=[num_filters // 2, num_classes],
+                    initializer=tf.contrib.layers.xavier_initializer())
             b = tf.Variable(tf.constant(0.1, shape=[num_classes]), name="b")
             l2_loss += tf.nn.l2_loss(W)
             l2_loss += tf.nn.l2_loss(b)
@@ -149,9 +122,67 @@ class TextCNN(object):
         
         # Jacobian Regularizer            
         with tf.name_scope("jacobian_reg"):
-            pass
-        
+            if jac_reg > 0.0:
+                layer_names = ["conv4-maxpool-1", "conv5-maxpool-1", "conv-maxpool-2", "conv-maxpool-3", "output"]
+                for idx, scope in enumerate(layer_names):
+                    with tf.variable_scope(scope, reuse=True):
+                        W = tf.get_variable("W")
+                        # jacobian matrix of network output w.r.t. the outputs of layer L
+                        # dimension: (batch_size, number of filters, height, width)
+                        # reshaped to: (batch_size, height, width, number of filters) - > (batch_size*height*width, number of filters)
+                        
+                        # NOTE: This is not correct. Dimensions need to be fixed but general arithemetic is correct.
+                        g_x = tf.gradients(tf.add(tf.multiply(input_y, self.predictions), layer_outputs[idx]).dimshuffle((0, 2, 3, 1)).reshape(
+                                (-1, W.shape[0])))
+                        
+                        # covariance matrix of jacobian vectors
+                        reg = tf.matmul(tf.transpose(g_x), g_x)
+
+                        # parameter update
+                        # NOTE: This is not correct. Dimensions need to be fixed but general arithemetic is correct.
+                        W -= 1e-3 * jac_reg * tf.tensordot(reg, W, axes=[[1], [0]])
+
         # Accuracy
         with tf.name_scope("accuracy"):
             correct_predictions = tf.equal(self.predictions, tf.argmax(self.input_y, 1))
             self.accuracy = tf.reduce_mean(tf.cast(correct_predictions, "float"), name="accuracy")
+
+    # TO DO:
+    # Add Fully Connected layer
+    # Fix Jacobian Regularizer
+
+
+    def init_weight(self, shape):
+        return tf.get_variable("W", shape, dtype=tf.float32, initializer=tf.truncated_normal_initializer(stddev=0.1))
+
+    def init_bias(self, shape):
+        return tf.Variable(tf.constant(0.1, shape=shape), name="b")
+
+    def non_linearity(self, conv, bias):
+        return tf.nn.relu(tf.nn.bias_add(conv, bias), name="relu")
+
+    def add_dropout(self, drop_input, keep_prob):
+        return tf.nn.dropout(drop_input, keep_prob)
+
+    def convolution(self, conv_input, weights):
+        conv = tf.nn.conv2d(
+            conv_input,
+            weights,
+            strides=[1, 1, 1, 1],
+            padding="VALID",
+            name="convolution")
+        return conv
+
+    def maxpool(self, pool_input, ksize):
+            pooled = tf.nn.max_pool(
+                        pool_input,
+                        ksize=ksize,
+                        strides=[1, 1, 1, 1],
+                        padding='VALID',
+                        name="pool")
+            return pooled
+
+    def fully_conected(self, fc_in, in_shape, out_shape):
+        W =  tf.Variable(tf.truncated_normal(filter_shape, stddev=0.1), name="W")
+        b = self.init_bias(out_shape)
+        return tf.nn.xw_plus_b(fc_in, W, b, name="fully_connected")

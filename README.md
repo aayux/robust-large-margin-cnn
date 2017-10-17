@@ -25,6 +25,8 @@ A Deep Convolutional Neural Network architecture, with a custom regularisation f
 ### Sources
 
 [1]  Jacobian Regularizer: [jureso/RobustLargeMarginDNN](https://github.com/jureso/RobustLargeMarginDNN)
+
 [2]  TextCNN: [dennybritz/cnn-text-classification-tf](https://github.com/dennybritz/cnn-text-classification-tf)
+
 [3]  Data Helpers: [rampage644/qrnn](https://github.com/rampage644/qrnn)
 

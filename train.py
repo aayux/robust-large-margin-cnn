@@ -10,9 +10,13 @@ from tensorflow.contrib import learn
 from text_cnn import TextCNN
 from data_utils import IMDBDataset
 
+sequence_length = 128
+num_classes = 2
+vocab_size = 75099
+embedding_dim = 300
 
 print ("Loading Dataset ...")
-dataset = IMDBDataset('/home/aayush/robust-large-margin-cnn-develop/data/aclImdb/train', '/home/aayush/robust-large-margin-cnn-develop/data/vocab.pckl')
+dataset = IMDBDataset('/home/ubuntu/robust-large-margin-cnn/data/aclImdb/train', '/home/ubuntu/robust-large-margin-cnn/data/vocab.pckl')
 X, Y = dataset.load()
 print ("Dataset loaded. Preparing data and loading embeddings ...")
 
@@ -22,7 +26,7 @@ shuffle_indices = np.random.permutation(np.arange(len(Y)))
 X_train = X[shuffle_indices]
 Y_train = Y[shuffle_indices]
 
-embedding_path = '/home/aayush/robust-large-margin-cnn-develop/data/embeddings.npy'
+embedding_path = '/home/ubuntu/robust-large-margin-cnn/data/embeddings.npy'
 embedding = utils.load_embeddings(embedding_path, vocab_size, embedding_dim)
 print ("Embeddings loaded. Initialising model hyperparameters ...")
 

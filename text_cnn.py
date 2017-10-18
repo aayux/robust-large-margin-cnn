@@ -20,9 +20,9 @@ class TextCNN(object):
         l2_loss = tf.constant(0.0)
        
         # Embedding layer
-        self.word_embedding = tf.Variable(tf.constant(0.0, shape=[vocab_size, embedding_dim]),
+        self.word_embedding = tf.Variable(tf.constant(0.0, shape=[vocab_size, embedding_size]),
                 trainable=False, name="W")
-        self.embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, embedding_dim])
+        self.embedding_placeholder = tf.placeholder(tf.float32, [vocab_size, embedding_size])
         self.embedding_init = self.word_embedding.assign(self.embedding_placeholder)
         
         with tf.device('/cpu:0'), tf.name_scope("embedding"):            

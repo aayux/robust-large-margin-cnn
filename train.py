@@ -38,10 +38,10 @@ l2_reg_lambda = 0.0
 jac_reg = 0.1
 
 # Training parameters
-batch_size = 50
-num_epochs = 10
-checkpoint_every = 100
-num_checkpoints = 6
+batch_size = 128
+num_epochs = 200
+checkpoint_every = 500
+num_checkpoints = 5
 
 print("Starting training ...")
 

@@ -62,7 +62,7 @@ with graph.as_default():
 
 # Print accuracy if y_test is defined
 if y_test is not None:
-    y_test = [col[0] for col in y_test]
+    y_test = [col[1] for col in y_test]
     correct_predictions = float(sum(all_predictions == y_test))
     print("Total number of test examples: {}".format(len(y_test)))
     print("Accuracy: {:g}".format(correct_predictions/float(len(y_test))))

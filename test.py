@@ -15,7 +15,7 @@ print ("Intialising test parameters ...")
 
 batch_size = 64
 # Checkpoint directory from training run
-checkpoint_dir = ""
+checkpoint_dir = "/home/ubuntu/robust-large-margin-cnn/runs/jac-reg/checkpoints"
 # Evaluate on all training data
 eval_train = False
 

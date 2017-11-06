@@ -26,7 +26,7 @@ log_device_placement = False
 print ("Loading test data ...")
 dataset = IMDBDataset('/home/ubuntu/robust-large-margin-cnn/data/aclImdb/test', '/home/ubuntu/robust-large-margin-cnn/data/vocab.pckl')
 # NOTE: Fetch raw text
-X, Y = dataset.load()
+x_test, y_test = dataset.load()
 print ("Dataset loaded. Starting evaluation ...")
 
 # Evaulation
@@ -34,8 +34,8 @@ checkpoint_file = tf.train.latest_checkpoint(checkpoint_dir)
 graph = tf.Graph()
 with graph.as_default():
     session_conf = tf.ConfigProto(
-      allow_soft_placement=FLAGS.allow_soft_placement,
-      log_device_placement=FLAGS.log_device_placement)
+      allow_soft_placement=allow_soft_placement,
+      log_device_placement=log_device_placement)
     sess = tf.Session(config=session_conf)
     with sess.as_default():
         # Load the saved meta graph and restore variables
@@ -62,6 +62,7 @@ with graph.as_default():
 
 # Print accuracy if y_test is defined
 if y_test is not None:
+    y_test = [col[0] for col in y_test]
     correct_predictions = float(sum(all_predictions == y_test))
     print("Total number of test examples: {}".format(len(y_test)))
     print("Accuracy: {:g}".format(correct_predictions/float(len(y_test))))

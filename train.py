@@ -23,25 +23,35 @@ print ("Dataset loaded. Preparing data and loading embeddings ...")
 np.random.seed(10)
 shuffle_indices = np.random.permutation(np.arange(len(Y)))
 
-X_train = X[shuffle_indices]
-Y_train = Y[shuffle_indices]
+X_shuff = X[shuffle_indices]
+Y_shuff = Y[shuffle_indices]
+
+# Percentage of the training data to use for validation
+val_sample = .2
+
+# Split train/test set
+idx = -1 * int(val_sample * float(len(Y)))
+X_train, X_val = X_shuff[:idx], X_shuff[idx:]
+Y_train, Y_val = Y_shuff[:idx], Y_shuff[idx:]
+print("Train/Val split: {:d}/{:d}".format(len(Y_train), len(Y_val)))
 
 embedding_path = '/home/ubuntu/robust-large-margin-cnn/data/embeddings.npy'
 embedding = utils.load_embeddings(embedding_path, vocab_size, embedding_dim)
-print ("Embeddings loaded. Initialising model hyperparameters ...")
+print ("Embeddings loaded, Vocabulary Size: {:d}. Initialising model hyperparameters ...".format(vocab_size))
 
-# Model Hyperparameters
+# Model parameters
 filter_sizes = [4, 5]
-num_filters = 64
-dropout_keep_prob = 0.5
+num_filters = 128
 l2_reg_lambda = 0.0
 jac_reg = 0.1
 
 # Training parameters
 batch_size = 128
-num_epochs = 200
-checkpoint_every = 500
-num_checkpoints = 5
+num_epochs = 100
+learning_rate = 0.001
+checkpoint_every = 1000
+validate_every = 500
+num_checkpoints = 3
 
 print("Starting training ...")
 
@@ -60,16 +70,17 @@ with tf.Graph().as_default():
             embedding_size=embedding_dim,
             filter_sizes=filter_sizes,
             num_filters=num_filters,
+            learning_rate=learning_rate,
             l2_reg_lambda=l2_reg_lambda,
             jac_reg=jac_reg)
         
         # Define Training procedure
         global_step = tf.Variable(0, name="global_step", trainable=False)
-        optimizer = tf.train.AdamOptimizer(1e-3)
+        optimizer = tf.train.AdamOptimizer(learning_rate)
         grads_and_vars = optimizer.compute_gradients(cnn.loss)             
                 
         train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
-        
+      
         # Keep track of gradient values and sparsity (optional)
         grad_summaries = []
         for g, v in grads_and_vars:
@@ -94,6 +105,11 @@ with tf.Graph().as_default():
         train_summary_dir = os.path.join(out_dir, "summaries", "train")
         train_summary_writer = tf.summary.FileWriter(train_summary_dir, sess.graph)
 
+        # Val summaries
+        val_summary_op = tf.summary.merge([loss_summary, acc_summary])
+        val_summary_dir = os.path.join(out_dir, "summaries", "val")
+        val_summary_writer = tf.summary.FileWriter(val_summary_dir, sess.graph)
+
         # Checkpoint directory. Tensorflow assumes this directory already exists so we need to create it
         checkpoint_dir = os.path.abspath(os.path.join(out_dir, "checkpoints"))
         checkpoint_prefix = os.path.join(checkpoint_dir, "model")
@@ -110,7 +126,6 @@ with tf.Graph().as_default():
             feed_dict = {
                 cnn.input_x: x_batch,
                 cnn.input_y: y_batch,
-                cnn.dropout_keep_prob: dropout_keep_prob
             }
             _, step, summaries, loss, accuracy = sess.run(
                 [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
@@ -118,6 +133,19 @@ with tf.Graph().as_default():
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
             train_summary_writer.add_summary(summaries, step)
+
+        def validation_step(x_batch, y_batch, writer=None):
+            feed_dict = {
+                cnn.input_x: x_batch,
+                cnn.input_y: y_batch,
+            }
+            _, step, summaries, loss, accuracy = sess.run(
+                [train_op, global_step, val_summary_op, cnn.loss, cnn.accuracy],
+                feed_dict)
+            time_str = datetime.datetime.now().isoformat()
+            print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
+            if writer:
+                writer.add_summary(summaries, step)
         
         batches = utils.batch_iter(
         list(zip(X_train, Y_train)), batch_size, num_epochs)
@@ -127,6 +155,11 @@ with tf.Graph().as_default():
             x_batch, y_batch = zip(*batch)
             train_step(x_batch, y_batch)
             current_step = tf.train.global_step(sess, global_step)
+            
+            if current_step % validate_every == 0:
+                print("\nValidation: ")
+                validation_step(x_val, y_val, writer=val_summary_writer)
+
             if current_step % checkpoint_every == 0:
                 path = saver.save(sess, checkpoint_prefix, global_step=current_step)
                 print("Saved model checkpoint to {}\n".format(path))

@@ -23,17 +23,17 @@ print ("Dataset loaded. Preparing data and loading embeddings ...")
 np.random.seed(10)
 shuffle_indices = np.random.permutation(np.arange(len(Y)))
 
-X_shuff = X[shuffle_indices]
-Y_shuff = Y[shuffle_indices]
+x_shuff = X[shuffle_indices]
+y_shuff = Y[shuffle_indices]
 
 # Percentage of the training data to use for validation
 val_sample = .2
 
 # Split train/test set
 idx = -1 * int(val_sample * float(len(Y)))
-X_train, X_val = X_shuff[:idx], X_shuff[idx:]
-Y_train, Y_val = Y_shuff[:idx], Y_shuff[idx:]
-print("Train/Val split: {:d}/{:d}".format(len(Y_train), len(Y_val)))
+x_train, x_val = x_shuff[:idx], x_shuff[idx:]
+y_train, y_val = y_shuff[:idx], y_shuff[idx:]
+print("Train/Val split: {:d}/{:d}".format(len(y_train), len(y_val)))
 
 embedding_path = '/home/ubuntu/robust-large-margin-cnn/data/embeddings.npy'
 embedding = utils.load_embeddings(embedding_path, vocab_size, embedding_dim)
@@ -148,7 +148,7 @@ with tf.Graph().as_default():
                 writer.add_summary(summaries, step)
         
         batches = utils.batch_iter(
-        list(zip(X_train, Y_train)), batch_size, num_epochs)
+        list(zip(x_train, y_train)), batch_size, num_epochs)
         
         # Training loop. For each batch...
         for batch in batches:

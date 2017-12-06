@@ -2,6 +2,8 @@
 
 ## A Text Classification Example
 
+### Re-writing model as character level CNN.
+
 ### About Code
 This is currently a work in progress. See notebooks for examples and test runs. Evaluation results coming soon.
 

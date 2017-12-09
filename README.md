@@ -10,11 +10,12 @@ This is currently a work in progress. See notebooks for examples and test runs. 
 
 ### About Model
 
-A character level Convolutional Neural Network architecture[1], with a custom regularisation function to bound the norm of network’s Jacobian in the neighbourhood of training samples for tighter generalisation[2].
+A character level Convolutional Neural Network architecture$^[1]$, with a custom regularisation function to bound the norm of network’s Jacobian in the neighbourhood of training samples for tighter generalisation$^[2]$.
 
 ### References
 
 [1]  [Character-level Convolutional Networks for Text Classification](https://papers.nips.cc/paper/5782-character-level-convolutional-networks-for-text-classification.pdf), Zhang et al. (September 2015)
+
 [2]  [Robust Large Margin Deep Neural Networks](https://arxiv.org/abs/1605.08254), Jure Sokolic et al. (revised May 2017)
 
 

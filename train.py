@@ -7,18 +7,23 @@ import numpy as np
 import data_utils as utils
 
 from tensorflow.contrib import learn
-from text_cnn import TextCNN
-from data_utils import IMDBDataset
+from char_cnn import CharCNN
+from data_utils import YelpDataset
 
-sequence_length = 128
-num_classes = 2
-vocab_size = 75099
-embedding_dim = 300
-
+# Load dataset
 print ("Loading Dataset ...")
-dataset = IMDBDataset('/home/ubuntu/robust-large-margin-cnn/data/aclImdb/train', '/home/ubuntu/robust-large-margin-cnn/data/vocab.pckl')
-X, Y = dataset.load()
-print ("Dataset loaded. Preparing data and loading embeddings ...")
+
+pcklfile = "./data/dump.pckl"
+
+if not os.path.isfile(pcklfile):
+    print ("No data dump found. Pickling dataset ...")
+    dataset = YelpDataset('./data/review.json')
+    X, Y = dataset.load()
+    pckl.dump([X, Y], open(pcklfile, "wb"))
+else:
+    X, Y = pckl.load(open(pcklfile, "rb"))
+
+print ("Dataset loaded. Preparing data ...")
 
 np.random.seed(10)
 shuffle_indices = np.random.permutation(np.arange(len(Y)))
@@ -35,27 +40,30 @@ x_train, x_val = x_shuff[:idx], x_shuff[idx:]
 y_train, y_val = y_shuff[:idx], y_shuff[idx:]
 print("Train/Val split: {:d}/{:d}".format(len(y_train), len(y_val)))
 
-embedding_path = '/home/ubuntu/robust-large-margin-cnn/data/embeddings.npy'
-embedding = utils.load_embeddings(embedding_path, vocab_size, embedding_dim)
-print ("Embeddings loaded, Vocabulary Size: {:d}. Initialising model hyperparameters ...".format(vocab_size))
+# Input parameters
+sequence_length = 1014
+quantization_size = 70
+num_classes = 2
 
 # Model parameters
-filter_sizes = [4, 5]
-num_filters = 128
+filter_sizes = (7, 7, 3, 3, 3, 3)
+num_filters = 256
 l2_reg_lambda = 0.0
-jac_reg = 0.1
+jac_reg = 0.0
 
 # Training parameters
 batch_size = 128
-num_epochs = 100
-learning_rate = 0.001
+num_epochs = 50
+learning_rate = 1e-3
 checkpoint_every = 1000
-validate_every = 500
+validate_every = 5000
 num_checkpoints = 3
 
 print("Starting training ...")
 
 print("Dimensions:")
+
+print("Starting training ...")
 
 with tf.Graph().as_default():
     session_conf = tf.ConfigProto(
@@ -63,11 +71,10 @@ with tf.Graph().as_default():
       log_device_placement=False)
     sess = tf.Session(config=session_conf)
     with sess.as_default():
-        cnn = TextCNN(
+        cnn = CharCNN(
             sequence_length=sequence_length,
+            quantization_size=quantization_size,
             num_classes=num_classes,
-            vocab_size=vocab_size,
-            embedding_size=embedding_dim,
             filter_sizes=filter_sizes,
             num_filters=num_filters,
             learning_rate=learning_rate,
@@ -119,13 +126,12 @@ with tf.Graph().as_default():
 
         # Initialize all variables
         sess.run(tf.global_variables_initializer())
-        
-        sess.run(cnn.embedding_init, feed_dict={cnn.embedding_placeholder: embedding})
-        
+               
         def train_step(x_batch, y_batch):
             feed_dict = {
                 cnn.input_x: x_batch,
                 cnn.input_y: y_batch,
+                cnn.dropout_keep_prob: 0.5
             }
             _, step, summaries, loss, accuracy = sess.run(
                 [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
@@ -138,6 +144,7 @@ with tf.Graph().as_default():
             feed_dict = {
                 cnn.input_x: x_batch,
                 cnn.input_y: y_batch,
+                cnn.dropout_keep_prob: 1.0
             }
             _, step, summaries, loss, accuracy = sess.run(
                 [train_op, global_step, val_summary_op, cnn.loss, cnn.accuracy],
@@ -147,8 +154,7 @@ with tf.Graph().as_default():
             if writer:
                 writer.add_summary(summaries, step)
         
-        batches = utils.batch_iter(
-        list(zip(x_train, y_train)), batch_size, num_epochs)
+        batches = batch_iter(x_train, y_train, batch_size, num_epochs)
         
         # Training loop. For each batch...
         for batch in batches:

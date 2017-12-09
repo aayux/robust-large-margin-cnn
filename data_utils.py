@@ -1,109 +1,104 @@
-import sys
-import os
-import pickle
+from sklearn.preprocessing import LabelBinarizer
 
 import numpy as np
+import json
 
-"""
-Utility functions for handling dataset, embeddings and batches
-"""
+alphabet = "abcdefghijklmnopqrstuvwxyz0123456789-,;.!?:'\"/\\|_@#$%^&*~`+-=<>()[]{}\n"
 
-def convert_file(filepath, word_dict):
-    with open(filepath) as ifile:
-        return [word_dict.get(w, 0) for w in ifile.read().split(' ')]
-
-
-def discover_dataset(path, wdict):
-    dataset = []
-    for root, _, files in os.walk(path):
-        for sfile in [f for f in files if '.txt' in f]:
-            filepath = os.path.join(root, sfile)
-            dataset.append(convert_file(filepath, wdict))
-    return dataset
-
-
-def pad_dataset(dataset, maxlen):
-    return np.array(
-        [np.pad(r, (0, maxlen-len(r)), mode='constant') if len(r) < maxlen else np.array(r[:maxlen])
-         for r in dataset])
-
-
-# Class for dataset related operations
-class IMDBDataset():
-    def __init__(self, path, dict_path, maxlen=128):
-        pos_path = os.path.join(path, 'pos')
-        neg_path = os.path.join(path, 'neg')
-
-        with open(dict_path, 'rb') as dfile:
-            wdict = pickle.load(dfile)
-
-        self.pos_dataset = pad_dataset(discover_dataset(pos_path, wdict), maxlen).astype('i')
-        self.neg_dataset = pad_dataset(discover_dataset(neg_path, wdict), maxlen).astype('i')
+class YelpDataset():    
+    
+    def __init__(self, path):
+        self.path = path
 
     def __len__(self):
-        return len(self.pos_dataset) + len(self.neg_dataset)
-
-    def get_example(self, i):
-        is_neg = i >= len(self.pos_dataset)
-        dataset = self.neg_dataset if is_neg else self.pos_dataset
-        idx = i - len(self.pos_dataset) if is_neg else i
-        label = [0, 1] if is_neg else [1, 0]
-        
-        print (type(dataset[idx]))
-        return (dataset[idx], np.array(label, dtype=np.int32))
-    
+        return len(self.dataset)
+   
     def load(self):
         
-        dataset = np.concatenate((self.pos_dataset, self.neg_dataset))
-        labels = []
+        x, y = self.generate_data()
         
-        for idx in range (0, len(self.pos_dataset)):
-            labels.append([1, 0])
+        print("X: {}".format(x.shape))
+        print("Y: {}".format(y.shape))
         
-        for idx in range (0, len(self.neg_dataset)):
-            labels.append([0, 1])
-        
-        return dataset, np.array(labels, dtype=np.int32)
-
-
-# Function for handling word embeddings
-def load_embeddings(path, size, dimensions):
+        return x, y
     
-    embedding_matrix = np.zeros((size, dimensions), dtype=np.float32)
+    def generate_data(self):
+        x = []
+        y = []
+        with open(self.path) as dfile:
+            count = 0
+            
+            for line in dfile:
+                review = json.loads(line)
+                stars = review["stars"]
+                text = review["text"]
+                
+                # Non neutral reviews
+                if stars != 3:
+                    clipped = self.clip_seq(list(text.lower()))
+                    padded = self.pad_seq(clipped)
+                    int_seq = self.str_to_int8(padded)
+                    if stars == 1 or stars == 2:
+                        x.append(int_seq)
+                        y.append([1, 0])
+                    elif stars == 4 or stars == 5:
+                        x.append(int_seq)
+                        y.append([0, 1])
+                    count += 1
+                    if count % 1000 == 0:
+                        print("{} non-neutral instances processed".format(count))
+                        break
+        return np.array(x), np.array(y)
 
-    # As embedding matrix could be quite big we 'stream' it into output file
-    # chunk by chunk. One chunk shape could be [size // 10, dimensions].
-    # So to load whole matrix we read the file until it's exhausted.
-    size = os.stat(path).st_size
-    with open(path, 'rb') as ifile:
-        pos = 0
-        idx = 0
-        while pos < size:
-            chunk = np.load(ifile)
-            chunk_size = chunk.shape[0]
-            embedding_matrix[idx:idx+chunk_size, :] = chunk
-            idx += chunk_size
-            pos = ifile.tell()
-    return embedding_matrix
 
-# [WIP] function for creating batches
-def batch_iter(data, batch_size, num_epochs, shuffle=True):
+    def clip_seq(self, char_seq):
+        if len(char_seq) > 1014:
+            char_seq = char_seq[-1014:]
+        return char_seq
+
+
+    def pad_seq(self, char_seq, seq_length=1014, pad_char=" "):
+        pad_width = seq_length - len(char_seq)
+        padded_seq = char_seq + [pad_char] * pad_width
+        return padded_seq
+
+
+    def str_to_int8(self, char_seq):
+        return np.array([alphabet.find(char) for char in char_seq], dtype=np.int8)
+
+
+def one_hot_x(x, y, start_idx, end_idx):
+    x_batch = x[start_idx:end_idx]
+    y_batch = y[start_idx:end_idx]
+    one_hot_batch = []
+    
+    binarizer = LabelBinarizer()
+    binarizer.fit(range(len(alphabet)))
+    
+    for x in x_batch:
+        one_hot_batch.append(binarizer.transform(x))
+    one_hot_batch = np.array([one_hot_batch])
+    x_batch = np.transpose(one_hot_batch, (1, 3, 2, 0))
+    return x_batch, y_batch
+
+def batch_iter(x, y, batch_size, num_epochs, shuffle=True):
     """
     Generates a batch iterator for a dataset.
     """
     print ("Generating batch iterator ...")
-    data = np.array(data)
-    data_size = len(data)
-    num_batches_per_epoch = int((len(data)-1)/batch_size) + 1
+    data_size = len(x)
+    num_batches_per_epoch = int(data_size/batch_size) + 1
     for epoch in range(num_epochs):
         # Shuffle the data at each epoch
         if shuffle:
             shuffle_indices = np.random.permutation(np.arange(data_size))
-            shuffled_data = data[shuffle_indices]
+            x_shuff = x[shuffle_indices]
+            y_shuff = y[shuffle_indices]
         else:
-            shuffled_data = data
+            x_shuff = x
+            y_shuff = y
         for batch_num in range(num_batches_per_epoch):
-            start_index = batch_num * batch_size
-            end_index = min((batch_num + 1) * batch_size, data_size)
-            yield shuffled_data[start_index:end_index]
-
+            start_idx = batch_num * batch_size
+            end_idx = min((batch_num + 1) * batch_size, data_size)
+            x_batch, y_batch = one_hot_x(x_shuff, y_shuff, start_idx, end_idx)
+            yield list(zip(x_batch, y_batch))

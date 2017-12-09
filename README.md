@@ -10,7 +10,7 @@ This is currently a work in progress. See notebooks for examples and test runs. 
 
 ### About Model
 
-A character level Convolutional Neural Network architecture$^[1]$, with a custom regularisation function to bound the norm of network’s Jacobian in the neighbourhood of training samples for tighter generalisation$^[2]$.
+A character level Convolutional Neural Network architecture<sup>[1]</sup>, with a custom regularisation function to bound the norm of network’s Jacobian in the neighbourhood of training samples for tighter generalisation<sup>[2]</sup>.
 
 ### References
 

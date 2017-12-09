@@ -1,34 +1,26 @@
 # Jacobian Regularisation for Convolutional Neural Networks 
 
-## A Text Classification Example
-
-### Re-writing model as character level CNN.
+## A Text Classification Example with Character Level ConvNets
 
 ### About Code
 This is currently a work in progress. See notebooks for examples and test runs. Evaluation results coming soon.
 
-### How to run
-- Download the [IMdB Movie Reviews](http://ai.stanford.edu/~amaas/data/sentiment/) and [GloVe](https://nlp.stanford.edu/projects/glove/) datasets.
-- Generate embeddings using: 
-
-`python embeddings.py -d data/glove.42B.300d.txt --npy_output data/embeddings.npy --dict_output data/vocab.pckl --dict_whitelist data/aclImdb/imdb.vocab`
-
-- Start training with train.py
+### Downloads
+- [Yelp Reviews](https://www.yelp.com/dataset/challenge)
 
 ### About Model
 
-A Deep Convolutional Neural Network architecture, with a custom regularisation function to bound the norm of network’s Jacobian in the neighbourhood of training samples for tighter generalisation [1].
+A character level Convolutional Neural Network architecture[1], with a custom regularisation function to bound the norm of network’s Jacobian in the neighbourhood of training samples for tighter generalisation[2].
 
 ### References
 
-[1]  [Robust Large Margin Deep Neural Networks](https://arxiv.org/abs/1605.08254), Jure Sokolic et al. (revised May 2017)
+[1]  [Character-level Convolutional Networks for Text Classification](https://papers.nips.cc/paper/5782-character-level-convolutional-networks-for-text-classification.pdf), Zhang et al. (September 2015)
+[2]  [Robust Large Margin Deep Neural Networks](https://arxiv.org/abs/1605.08254), Jure Sokolic et al. (revised May 2017)
 
 
 ### Sources
 
 - Jacobian Regularizer: [jureso/RobustLargeMarginDNN](https://github.com/jureso/RobustLargeMarginDNN)
 
-- TextCNN: [dennybritz/cnn-text-classification-tf](https://github.com/dennybritz/cnn-text-classification-tf)
-
-- Data Helpers: [rampage644/qrnn](https://github.com/rampage644/qrnn)
+- CharCNN: [scharmchi/char-level-cnn-tf](https://github.com/scharmchi/char-level-cnn-tf)
 

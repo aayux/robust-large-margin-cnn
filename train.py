@@ -2,13 +2,14 @@ import os
 import time
 import datetime
 
-import tensorflow as tf
 import numpy as np
+import pickle as pckl
+import tensorflow as tf
 import data_utils as utils
 
-from tensorflow.contrib import learn
 from char_cnn import CharCNN
 from data_utils import YelpDataset
+from tensorflow.contrib import learn
 
 # Load dataset
 print ("Loading Dataset ...")
@@ -124,6 +125,10 @@ with tf.Graph().as_default():
             os.makedirs(checkpoint_dir)
         saver = tf.train.Saver(tf.global_variables(), max_to_keep=num_checkpoints)
 
+        #ckpt = tf.train.get_checkpoint_state(os.path.dirname('./runs/<>'))
+        #if ckpt and ckpt.model_checkpoint_path:
+        #    saver.restore(sess, ckpt.model_checkpoint_path)
+
         # Initialize all variables
         sess.run(tf.global_variables_initializer())
                
@@ -141,20 +146,30 @@ with tf.Graph().as_default():
             train_summary_writer.add_summary(summaries, step)
 
         def validation_step(x_batch, y_batch, writer=None):
-            feed_dict = {
-                cnn.input_x: x_batch,
-                cnn.input_y: y_batch,
-                cnn.dropout_keep_prob: 1.0
-            }
-            _, step, summaries, loss, accuracy = sess.run(
-                [train_op, global_step, val_summary_op, cnn.loss, cnn.accuracy],
-                feed_dict)
-            time_str = datetime.datetime.now().isoformat()
-            print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
-            if writer:
-                writer.add_summary(summaries, step)
+            val_size = len(x_batch)
+            # batch size is chosen arbitrarily
+            batch_size = 500
+            n_batches = val_size / batch_size
+            
+            for idx in range(n_batches):
+                x_batch_val, y_batch_val = utils.one_hot_x(x_batch, 
+                                            y_batch, idx * batch_size, 
+                                            (idx +1) * batch_size)
+                feed_dict = {
+                    cnn.input_x: x_batch_val,
+                    cnn.input_y: y_batch_val,
+                    cnn.dropout_keep_prob: 1.0
+                }
+                _, step, summaries, loss, accuracy = sess.run(
+                    [train_op, global_step, val_summary_op, cnn.loss, cnn.accuracy],
+                    feed_dict)
+                
+                time_str = datetime.datetime.now().isoformat()
+                print("{}: val_batch {}, loss {:g}, acc {:g}".format(time_str, idx + 1, loss, accuracy))
+                if writer:
+                    writer.add_summary(summaries, step)
         
-        batches = batch_iter(x_train, y_train, batch_size, num_epochs)
+        batches = utils.batch_iter(x_train, y_train, batch_size, num_epochs)
         
         # Training loop. For each batch...
         for batch in batches:

@@ -1,8 +1,6 @@
 # based on github.com/scharmchi/char-level-cnn-tf
-# This file is marked [WIP]
 
 import tensorflow as tf
-
 
 class CharCNN(object):
     """
@@ -155,8 +153,7 @@ class CharCNN(object):
             softmax_pred = tf.nn.softmax_cross_entropy_with_logits(logits=self.scores, labels=self.input_y)
             self.loss = tf.reduce_mean(softmax_pred) + l2_reg_lambda * l2_loss
 
-        # Jacobian Regularizer
-        # Currently failing here: slice index 3 of dimension 0 out of bounds ...
+        # Jacobian Regularizer 
         with tf.name_scope("jacobian-regularizer"):
             if jac_reg > 0.0:
                 layer_names = ["conv-maxpool-1", "conv-maxpool-2",
@@ -174,15 +171,16 @@ class CharCNN(object):
                                 self.scores), layer_outputs[idx])
 
                         # reshape (batch_size, height, width, number of filters) to (batch_size * width, number of filters)
-                        g_x = tf.reshape(g_x, shape=[-1,
-                                tf.shape(W)[3]])
+                        if scope not in ["fc-1", "fc-2"]:
+                            g_x = tf.reshape(g_x, shape=[-1, tf.shape(W)[3]])
+                        else:
+                            g_x = tf.squeeze(g_x)
 
                         # covariance matrix of jacobian vectors
                         reg = tf.matmul(tf.transpose(g_x), g_x)
 
                         # parameter update
-                        W -= learning_rate * jac_reg \
-                            * tf.tensordot(reg, W, axes=[[1], [0]])
+                        W -= learning_rate * jac_reg * tf.tensordot(reg, W, axes=[[1], [0]])
 
         # Accuracy
         with tf.name_scope("accuracy"):

@@ -26,7 +26,7 @@ class CharCNN(object):
                 W = tf.get_variable(shape=filter_shape, initializer=tf.truncated_normal_initializer(stddev=0.05), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(self.input_x, W, strides=[1, 1, 1, 1], padding="VALID", name="conv1")
-            h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+            h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
             pooled = tf.nn.max_pool(
                 h,
                 ksize=[1, 1, 3, 1],
@@ -42,7 +42,7 @@ class CharCNN(object):
                 W = tf.get_variable(shape=filter_shape, initializer=tf.truncated_normal_initializer(stddev=0.05), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(pooled, W, strides=[1, 1, 1, 1], padding="VALID", name="conv2")
-            h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+            h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
             pooled = tf.nn.max_pool(
                 h,
                 ksize=[1, 1, 3, 1],
@@ -58,7 +58,7 @@ class CharCNN(object):
                 W = tf.get_variable(shape=filter_shape, initializer=tf.truncated_normal_initializer(stddev=0.05), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(pooled, W, strides=[1, 1, 1, 1], padding="VALID", name="conv3")
-            h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+            h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
             layer_outputs.append(h)
 
         # Layer 4
@@ -68,7 +68,7 @@ class CharCNN(object):
                 W = tf.get_variable(shape=filter_shape, initializer=tf.truncated_normal_initializer(stddev=0.05), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(h, W, strides=[1, 1, 1, 1], padding="VALID", name="conv4")
-            h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+            h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
             layer_outputs.append(h)
 
         # Layer 5
@@ -78,7 +78,7 @@ class CharCNN(object):
                 W = tf.get_variable(shape=filter_shape, initializer=tf.truncated_normal_initializer(stddev=0.05), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(h, W, strides=[1, 1, 1, 1], padding="VALID", name="conv5")
-            h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+            h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
             layer_outputs.append(h)
 
         # Layer 6
@@ -88,7 +88,7 @@ class CharCNN(object):
                 W = tf.get_variable(shape=filter_shape, initializer=tf.truncated_normal_initializer(stddev=0.05), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(h, W, strides=[1, 1, 1, 1], padding="VALID", name="conv6")
-            h = tf.nn.relu(tf.nn.bias_add(conv, b), name="relu")
+            h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
             pooled = tf.nn.max_pool(
                 h,
                 ksize=[1, 1, 3, 1],
@@ -115,7 +115,7 @@ class CharCNN(object):
             # l2_loss += tf.nn.l2_loss(W)
             # l2_loss += tf.nn.l2_loss(b)
 
-            fc_1_output = tf.nn.relu(tf.nn.xw_plus_b(drop1, W, b), name="fc-1-out")
+            fc_1_output = tf.nn.elu(tf.nn.xw_plus_b(drop1, W, b), name="fc-1-out")
             layer_outputs.append(fc_1_output)
 
         # Layer 8
@@ -133,7 +133,7 @@ class CharCNN(object):
             # l2_loss += tf.nn.l2_loss(W)
             # l2_loss += tf.nn.l2_loss(b)
 
-            fc_2_output = tf.nn.relu(tf.nn.xw_plus_b(drop2, W, b), name="fc-2-out")
+            fc_2_output = tf.nn.elu(tf.nn.xw_plus_b(drop2, W, b), name="fc-2-out")
             layer_outputs.append(fc_2_output)
 
         # Layer 9

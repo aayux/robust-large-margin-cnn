@@ -2,6 +2,4 @@
 
 ## A Text Classification Example
 
-----------------------------------------------------------
-
-Download datasets here.
+Download the [Yelp Reviews](https://www.yelp.com/dataset/challenge) dataset here.

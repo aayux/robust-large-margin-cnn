@@ -3,12 +3,7 @@
 ## A Text Classification Example with Character Level ConvNets
 
 ### About Code
-This is currently a work in progress. See notebooks for examples and test runs. Evaluation results coming soon.
-
-New features (coming soon):
-
-- Resume training from checkpoint for long days of training.
-- Visualisation of histogram summaries for weight updates and layer actions.
+This is currently a work in progress. Model requires some tweaking.
 
 ### Downloads
 - [Yelp Reviews](https://www.yelp.com/dataset/challenge)

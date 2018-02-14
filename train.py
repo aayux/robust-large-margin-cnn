@@ -55,7 +55,7 @@ jac_reg = 0.0
 # Training parameters
 batch_size = 128
 num_epochs = 50
-learning_rate = 1e-3
+starter_learning_rate = 1e-3
 checkpoint_every = 1000
 validate_every = 5000
 num_checkpoints = 3
@@ -78,15 +78,16 @@ with tf.Graph().as_default():
             num_classes=num_classes,
             filter_sizes=filter_sizes,
             num_filters=num_filters,
-            learning_rate=learning_rate,
             l2_reg_lambda=l2_reg_lambda,
             jac_reg=jac_reg)
         
-        # Define Training procedure
+                # Define Training procedure
         global_step = tf.Variable(0, name="global_step", trainable=False)
-        optimizer = tf.train.AdamOptimizer(learning_rate)
-        grads_and_vars = optimizer.compute_gradients(cnn.loss)             
-                
+        learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
+                                                   10000, 0.5, staircase=True)
+
+        optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=1e-5)
+        grads_and_vars = optimizer.compute_gradients(resnext.loss)        
         train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
       
         # Keep track of gradient values and sparsity (optional)
@@ -133,13 +134,15 @@ with tf.Graph().as_default():
         sess.run(tf.global_variables_initializer())
                
         def train_step(x_batch, y_batch):
+            shared_learning_rate = sess.run(learning_rate)
             feed_dict = {
                 cnn.input_x: x_batch,
                 cnn.input_y: y_batch,
+                cnn.learning_rate: shared_learning_rate,
                 cnn.dropout_keep_prob: 0.5
             }
-            _, step, summaries, loss, accuracy = sess.run(
-                [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy],
+            _, step, summaries, loss, accuracy, weight_update = sess.run(
+                [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy, cnn.W_update],
                 feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))

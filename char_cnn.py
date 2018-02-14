@@ -8,11 +8,12 @@ class CharCNN(object):
     based on the Character-level Convolutional Networks for Text Classification.
     """
     def __init__(self, sequence_length, quantization_size, num_classes, filter_sizes, num_filters, 
-        learning_rate, l2_reg_lambda=0.0, jac_reg=0.0):
+                 l2_reg_lambda=0.0, jac_reg=0.0):
 
         # Placeholders for input, output and dropout
         self.input_x = tf.placeholder(tf.float32, [None, quantization_size, sequence_length, 1], name="input_x")
         self.input_y = tf.placeholder(tf.float32, [None, num_classes], name="input_y")
+        self.learning_rate = tf.placeholder(tf.float32, name="learning_rate")
         self.dropout_keep_prob = tf.placeholder(tf.float32, name="dropout_keep_prob")
 
         # Keeping track of l2 regularization loss (optional)
@@ -153,34 +154,28 @@ class CharCNN(object):
             softmax_pred = tf.nn.softmax_cross_entropy_with_logits(logits=self.scores, labels=self.input_y)
             self.loss = tf.reduce_mean(softmax_pred) + l2_reg_lambda * l2_loss
 
-        # Jacobian Regularizer 
-        with tf.name_scope("jacobian-regularizer"):
-            if jac_reg > 0.0:
-                layer_names = ["conv-maxpool-1", "conv-maxpool-2",
-                               "conv-3", "conv-4", "conv-5",
-                               "conv-maxpool-6", "fc-1", "fc-2"]
-                for (idx, scope) in enumerate(layer_names):
-                    with tf.variable_scope(scope, reuse=True):
-                        W = tf.get_variable("W")
+        # Jacobian Regularizer
+		if jac_reg > 0.0:
+			layer_names = ["conv-maxpool-1", "conv-maxpool-2",
+						   "conv-3", "conv-4", "conv-5",
+						   "conv-maxpool-6", "fc-1", "fc-2"]
 
-                        # jacobian matrix of network output w.r.t. the outputs of layer L
-                        # dimension: (batch_size, width, height, number of filters)
+			for (idx, scope) in enumerate(layer_names):
+				with tf.variable_scope(scope, reuse=True):
+					W = tf.get_variable("W")
 
-                        # g_x = tf.gradients(tf.reduce_sum(tf.multiply(self.input_y, self.scores)), layer_outputs[idx])
-                        g_x = tf.gradients(tf.multiply(self.input_y,
-                                self.scores), layer_outputs[idx])
+					# jacobian matrix of network output w.r.t. the outputs of layer L
+					# dimension: (batch_size, width, height, number of filters)
+					g_x = tf.gradients(tf.multiply(self.input_y, self.scores), layer_outputs[idx])
 
-                        # reshape (batch_size, height, width, number of filters) to (batch_size * width, number of filters)
-                        if scope not in ["fc-1", "fc-2"]:
-                            g_x = tf.reshape(g_x, shape=[-1, tf.shape(W)[3]])
-                        else:
-                            g_x = tf.squeeze(g_x)
+					# reshape (batch_size, height, width, number of filters) to (batch_size * width, number of filters)
+					g_x = tf.reshape(g_x, shape=[-1, tf.shape(W)[-1]])
 
-                        # covariance matrix of jacobian vectors
-                        reg = tf.matmul(tf.transpose(g_x), g_x)
+					# covariance matrix of jacobian vectors
+					reg = tf.matmul(tf.transpose(g_x), g_x)
 
-                        # parameter update
-                        W -= learning_rate * jac_reg * tf.tensordot(reg, W, axes=[[1], [0]])
+					# parameter update
+					self.W_update = W.assign(W - (self.learning_rate * jac_reg * tf.tensordot(W, reg, axes=[[-1], [1]])))
 
         # Accuracy
         with tf.name_scope("accuracy"):

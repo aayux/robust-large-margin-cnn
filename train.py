@@ -78,17 +78,24 @@ with tf.Graph().as_default():
             num_classes=num_classes,
             filter_sizes=filter_sizes,
             num_filters=num_filters,
-            l2_reg_lambda=l2_reg_lambda,
-            jac_reg=jac_reg)
+            l2_reg_lambda=l2_reg_lambda)
         
-                # Define Training procedure
+        # Define Training procedure
         global_step = tf.Variable(0, name="global_step", trainable=False)
         learning_rate = tf.train.exponential_decay(starter_learning_rate, global_step,
                                                    10000, 0.5, staircase=True)
 
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=1e-5)
-        grads_and_vars = optimizer.compute_gradients(resnext.loss)        
+        grads_and_vars = optimizer.compute_gradients(cnn.loss)        
         train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
+        
+        # Jacobian regularizer update
+        for g, w in grads_and_vars:
+            if ("W" in w.name) and ("output" not in w.name):
+                depth = w.get_shape()[-1].value
+                g_ = tf.reshape(g, shape=[-1, depth])
+                reg = tf.matmul(tf.transpose(g_), g_)
+                w_update_op = tf.assign_sub(w, jac_reg_alpha * learning_rate * tf.tensordot(w, reg, axes=[[-1], [1]]))
       
         # Keep track of gradient values and sparsity (optional)
         grad_summaries = []
@@ -134,16 +141,15 @@ with tf.Graph().as_default():
         sess.run(tf.global_variables_initializer())
                
         def train_step(x_batch, y_batch):
-            shared_learning_rate = sess.run(learning_rate)
             feed_dict = {
                 cnn.input_x: x_batch,
                 cnn.input_y: y_batch,
-                cnn.learning_rate: shared_learning_rate,
                 cnn.dropout_keep_prob: 0.5
             }
             _, step, summaries, loss, accuracy, weight_update = sess.run(
                 [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy, cnn.W_update],
                 feed_dict)
+            weight_update = sess.run(w_update_op, feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
             train_summary_writer.add_summary(summaries, step)

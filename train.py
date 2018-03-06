@@ -88,14 +88,26 @@ with tf.Graph().as_default():
         optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate, epsilon=1e-5)
         grads_and_vars = optimizer.compute_gradients(cnn.loss)        
         train_op = optimizer.apply_gradients(grads_and_vars, global_step=global_step)
-        
-        # Jacobian regularizer update
-        for g, w in grads_and_vars:
+       
+        # Jacobian Regularizer
+        idx = 0
+        for _, w in grads_and_vars:
             if ("W" in w.name) and ("output" not in w.name):
-                depth = w.get_shape()[-1].value
-                g_ = tf.reshape(g, shape=[-1, depth])
-                reg = tf.matmul(tf.transpose(g_), g_)
-                w_update_op = tf.assign_sub(w, jac_reg_alpha * learning_rate * tf.tensordot(w, reg, axes=[[-1], [1]]))
+                # jacobian matrix of network output w.r.t. the outputs of layer L
+                g = tf.gradients(tf.multiply(cnn.input_y, cnn.scores), cnn.out_accumulator[idx])
+                
+                # reshape (batch_size, height, width, depth) to (batch_size * height * width, depth)
+                dim = w.get_shape()[-1].value
+                g = tf.reshape(g, shape=[-1, dim])
+                
+                # covariance matrix of jacobian vectors
+                gg = tf.matmul(tf.transpose(g), g)
+                
+                # update step
+                w_update_op = tf.assign_sub(w, 
+                    learning_rate * jac_reg_alpha * tf.tensordot(var, gg, axes=[[-1], [1]]))
+
+                idx += 1
       
         # Keep track of gradient values and sparsity (optional)
         grad_summaries = []

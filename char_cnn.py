@@ -17,6 +17,8 @@ class CharCNN(object):
 
         # Keeping track of l2 regularization loss (optional)
         l2_loss = tf.constant(0.0)
+	
+		self.out_accumulator = []
 
         # Layer 1
         with tf.name_scope("conv-maxpool-1"):
@@ -32,6 +34,8 @@ class CharCNN(object):
                 strides=[1, 1, 3, 1],
                 padding='VALID',
                 name="pool1")
+        self.out_accumulator.append(pooled)
+		
 
         # Layer 2
         with tf.name_scope("conv-maxpool-2"):
@@ -47,6 +51,7 @@ class CharCNN(object):
                 strides=[1, 1, 3, 1],
                 padding='VALID',
                 name="pool2")
+        self.out_accumulator.append(pooled)
 
         # Layer 3
         with tf.name_scope("conv-3"):
@@ -56,6 +61,7 @@ class CharCNN(object):
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(pooled, W, strides=[1, 1, 1, 1], padding="VALID", name="conv3")
             h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
+        self.out_accumulator.append(pooled)
 
         # Layer 4
         with tf.name_scope("conv-4"):
@@ -65,6 +71,7 @@ class CharCNN(object):
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(h, W, strides=[1, 1, 1, 1], padding="VALID", name="conv4")
             h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
+        self.out_accumulator.append(pooled)
 
         # Layer 5
         with tf.name_scope("conv-5"):
@@ -74,6 +81,7 @@ class CharCNN(object):
             b = tf.Variable(tf.constant(0.1, shape=[num_filters]), name="b")
             conv = tf.nn.conv2d(h, W, strides=[1, 1, 1, 1], padding="VALID", name="conv5")
             h = tf.nn.elu(tf.nn.bias_add(conv, b), name="elu")
+        self.out_accumulator.append(pooled)
 
         # Layer 6
         with tf.name_scope("conv-maxpool-6"):
@@ -89,6 +97,7 @@ class CharCNN(object):
                 strides=[1, 1, 3, 1],
                 padding='VALID',
                 name="pool6")
+        self.out_accumulator.append(pooled)
 
         # Layer 7
         feature_vec_length = 34 * num_filters
@@ -104,6 +113,7 @@ class CharCNN(object):
                 W = tf.get_variable(shape=[feature_vec_length, 1024], initializer=tf.truncated_normal_initializer(stddev=0.05), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[1024]), name="b")
 	    	fc_1_output = tf.nn.elu(tf.nn.xw_plus_b(drop1, W, b), name="fc-1-out")
+        self.out_accumulator.append(fc_1_output)
 
         # Layer 8
         # Add dropout
@@ -116,6 +126,7 @@ class CharCNN(object):
                 W = tf.get_variable(shape=[1024, 1024], initializer=tf.truncated_normal_initializer(stddev=0.05), name="W")
             b = tf.Variable(tf.constant(0.1, shape=[1024]), name="b")
             fc_2_output = tf.nn.elu(tf.nn.xw_plus_b(drop2, W, b), name="fc-2-out")
+        self.out_accumulator.append(fc_2_output)
 
         # Layer 9
         # Output layer

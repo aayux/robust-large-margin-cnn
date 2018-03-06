@@ -106,7 +106,6 @@ with tf.Graph().as_default():
                 # update step
                 w_update_op = tf.assign_sub(w, 
                     learning_rate * jac_reg_alpha * tf.tensordot(var, gg, axes=[[-1], [1]]))
-
                 idx += 1
       
         # Keep track of gradient values and sparsity (optional)
@@ -161,7 +160,8 @@ with tf.Graph().as_default():
             _, step, summaries, loss, accuracy, weight_update = sess.run(
                 [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy, cnn.W_update],
                 feed_dict)
-            weight_update = sess.run(w_update_op, feed_dict)
+            if jace_reg > 0.:
+                weight_update = sess.run([w_update_op], feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
             train_summary_writer.add_summary(summaries, step)

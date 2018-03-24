@@ -48,6 +48,7 @@ num_classes = 2
 
 # Model parameters
 filter_sizes = (7, 7, 3, 3, 3, 3)
+n_layers = 8
 num_filters = 256
 l2_reg_lambda = 0.0
 jac_reg = 0.0
@@ -91,6 +92,7 @@ with tf.Graph().as_default():
        
         # Jacobian Regularizer
         idx = 0
+        w_update = [0 for _ in range(n_layers)]
         for _, w in grads_and_vars:
             if ("W" in w.name) and ("output" not in w.name):
                 # jacobian matrix of network output w.r.t. the outputs of layer L
@@ -104,7 +106,7 @@ with tf.Graph().as_default():
                 gg = tf.matmul(tf.transpose(g), g)
                 
                 # update step
-                w_update_op = tf.assign_sub(w, 
+                w_update[idx] = tf.assign_sub(w, 
                     learning_rate * jac_reg_alpha * tf.tensordot(var, gg, axes=[[-1], [1]]))
                 idx += 1
       
@@ -161,7 +163,8 @@ with tf.Graph().as_default():
                 [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy, cnn.W_update],
                 feed_dict)
             if jace_reg > 0.:
-                weight_update = sess.run([w_update_op], feed_dict)
+                for idx in range(n_layers):
+                    sess.run(w_update[idx], feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
             train_summary_writer.add_summary(summaries, step)

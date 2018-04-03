@@ -2,6 +2,8 @@
 
 ## A Text Classification Example with Character Level ConvNets
 
+Tests currently failing.
+
 ### About Code
 This is currently a work in progress. Model requires some tweaking.
 

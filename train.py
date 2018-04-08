@@ -163,7 +163,7 @@ with tf.Graph().as_default():
                 [train_op, global_step, train_summary_op, cnn.loss, cnn.accuracy, cnn.W_update],
                 feed_dict)
             if jace_reg > 0.:
-                for idx in range(n_layers):
+                for idx in reversed(range(n_layers)):
                     sess.run(w_update[idx], feed_dict)
             time_str = datetime.datetime.now().isoformat()
             print("{}: step {}, loss {:g}, acc {:g}".format(time_str, step, loss, accuracy))
